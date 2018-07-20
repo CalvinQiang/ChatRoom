@@ -13,8 +13,13 @@ namespace App\Socket\WebSocket\Logic;
 
 use EasySwoole\Core\Component\Di;
 
-class Room
+class RoomRedis
 {
+    const T_USER = 'user:';
+    const T_FD = 'fd:';
+    const T_ROOM = 'room:';
+    const T_ROOM_SET = 'room_set';
+
     /**
      * 获取Redis连接实例
      * @return object Redis
@@ -23,6 +28,18 @@ class Room
     {
         return Di::getInstance()->get('REDIS')->handler();
     }
+
+    /**
+     * 登录
+     * @param  int    $userId 用户id
+     * @param  int    $fd     连接id
+     * @return bool
+     */
+    public static function login(int $userId, int $fd)
+    {
+        self::getRedis()->zAdd(self::T_USER, $userId, $fd);
+    }
+
 
     /**
      * 进入房间
@@ -34,20 +51,11 @@ class Room
     public static function joinRoom(int $roomId, int $fd)
     {
         $userId = self::getUserId($fd);
-        self::getRedis()->zAdd('rfMap', $roomId, $fd);
-        self::getRedis()->hSet("room:{$roomId}", $fd, $userId);
+        self::getRedis()->sSadd(self::T_ROOM_SET,$roomId);
+        self::getRedis()->hSet(self::T_FD.$fd, $roomId, $userId);
+        self::getRedis()->hSet(self::T_ROOM.$roomId, $fd, $userId);
     }
 
-    /**
-     * 登录
-     * @param  int    $userId 用户id
-     * @param  int    $fd     连接id
-     * @return bool
-     */
-    public static function login(int $userId, int $fd)
-    {
-        self::getRedis()->zAdd('online', $userId, $fd);
-    }
 
     /**
      * 获取用户id
@@ -56,7 +64,7 @@ class Room
      */
     public static function getUserId(int $fd)
     {
-        return self::getRedis()->zScore('online', $fd);
+        return self::getRedis()->zScore(self::T_USER, $fd);
     }
 
     /**
@@ -66,7 +74,7 @@ class Room
      */
     public static function getUserFd(int $userId)
     {
-        return self::getRedis()->zRange('online', $userId, $userId, true);
+        return self::getRedis()->zRange(self::T_USER, $userId, $userId, true);
     }
 
     /**
@@ -74,9 +82,9 @@ class Room
      * @param  int    $fd
      * @return int    RoomId
      */
-    public static function getRoomId(int $fd)
+    public static function getRoomIds(int $fd)
     {
-        return self::getRedis()->zScore('rfMap', $fd);
+        return self::getRedis()->hKeys(self::T_FD.$fd);
     }
 
     /**
@@ -86,7 +94,7 @@ class Room
      */
     public static function selectRoomFd(int $roomId)
     {
-        return self::getRedis()->hKeys("room:{$roomId}");
+        return self::getRedis()->hKeys(self::T_ROOM.$roomId);
     }
 
     /**
@@ -97,8 +105,8 @@ class Room
      */
     public static function exitRoom(int $roomId, int $fd)
     {
-        self::getRedis()->hDel("room:{$roomId}", $fd);
-        self::getRedis()->zRem('rfMap', $fd);
+        self::getRedis()->hDel(self::T_ROOM.$roomId, $fd);
+        self::getRedis()->hDel(self::T_FD.$fd, $roomId);
     }
 
     /**
@@ -107,8 +115,10 @@ class Room
      */
     public static function close(int $fd)
     {
-        $roomId = self::getRoomId($fd);
-        self::exitRoom($roomId, $fd);
-        self::getRedis()->zRem('online', $fd);
+        $roomIds = self::getRoomIds($fd);
+        foreach ($roomIds as $roomId){
+            self::exitRoom($roomId, $fd);
+            self::getRedis()->zRem(self::T_USER, $fd);
+        }
     }
 }

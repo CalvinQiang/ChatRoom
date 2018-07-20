@@ -11,7 +11,7 @@
 namespace App\Socket\WebSocket\Controller;
 
 
-use App\Socket\WebSocket\Logic\Room;
+use App\Socket\WebSocket\Logic\RoomRedis;
 use EasySwoole\Core\Socket\AbstractInterface\WebSocketController;
 
 class Index extends WebSocketController
@@ -32,11 +32,4 @@ class Index extends WebSocketController
         $this->response()->write("you fd is {$fd}");
     }
 
-    public function room()
-    {
-        $this->response()->write(123);
-        $this->response()->write(Room::testSet());
-        $this->response()->write("\n");
-        $this->response()->write(Room::testGet());
-    }
 }

@@ -11,25 +11,33 @@
 namespace App\Socket\WebSocket\Controller;
 
 
-use App\Socket\WebSocket\Logic\Room;
+use App\Socket\WebSocket\BaseController;
+use App\Socket\WebSocket\ErrorCode;
+use App\Socket\WebSocket\Logic\RoomRedis;
+use App\Socket\WebSocket\Response;
 use EasySwoole\Core\Socket\AbstractInterface\WebSocketController;
 use EasySwoole\Core\Swoole\ServerManager;
 use EasySwoole\Core\Swoole\Task\TaskManager;
 
-class chat extends WebSocketController
+class chat extends BaseController
 {
+
     /**
      * 访问找不到的action
-     * @param  ?string $actionName 找不到的name名
-     * @return string
+     * @param null|string $actionName
      */
     public function actionNotFound(?string $actionName)
     {
-        $this->response()->write("action call {$actionName} not found");
+        $code = ErrorCode::E_ROUTE_NOT_FOUND;
+        $message = Response::formatCodeMsg($code);
+        $package = Response::Error($message);
+        $this->sendPackage($package);
     }
 
     public function index()
     {
+        $package = Response::Ok('Change the World by Program');
+        $this->sendPackage($package);
     }
 
     /**
@@ -42,9 +50,12 @@ class chat extends WebSocketController
         $roomId = $param['roomId'];
 
         $fd = $this->client()->getFd();
-        Room::login($userId, $fd);
-        Room::joinRoom($roomId, $fd);
-        $this->response()->write("加入{$roomId}房间");
+        RoomRedis::login($userId, $fd);
+        RoomRedis::joinRoom($roomId, $fd);
+
+        $package = Response::Ok();
+        $this->sendPackage($package);
+        //$this->response()->write("加入{$roomId}房间");
     }
 
     /**
@@ -58,11 +69,13 @@ class chat extends WebSocketController
 
         //异步推送
         TaskManager::async(function () use ($roomId, $message) {
-            $list = Room::selectRoomFd($roomId);
+            $list = RoomRedis::selectRoomFd($roomId);
             foreach ($list as $fd) {
                 ServerManager::getInstance()->getServer()->push($fd, $message);
             }
         });
+        $package = Response::Ok();
+        $this->sendPackage($package);
     }
 
     /**
@@ -76,10 +89,12 @@ class chat extends WebSocketController
 
         //异步推送
         TaskManager::async(function () use ($userId, $message) {
-            $fdList = Room::getUserFd($userId);
+            $fdList = RoomRedis::getUserFd($userId);
             foreach ($fdList as $fd) {
                 ServerManager::getInstance()->getServer()->push($fd, $message);
             }
         });
+        $package = Response::Ok();
+        $this->sendPackage($package);
     }
 }

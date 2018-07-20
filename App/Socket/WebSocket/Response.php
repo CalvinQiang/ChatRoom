@@ -60,6 +60,19 @@ class Response
     }
 
     /**
+     * 格式化
+     * @param $code
+     * @return array
+     */
+    public static function formatCodeMsg($code)
+    {
+        $data = [
+            'errorCode' => $code,
+            'errorMsg' => ErrorCode::transErrorCode($code)
+        ];
+        return $data;
+    }
+    /**
      * @param $code
      * @param $messages
      * @param $data

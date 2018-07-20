@@ -8,12 +8,13 @@
 
 namespace EasySwoole;
 
-use App\Socket\WebSocket\Logic\Room;
+use App\Socket\WebSocket\Logic\RoomRedis;
 use App\Socket\WebSocket\Parser;
 use App\Utility\Redis;
 use \EasySwoole\Core\AbstractInterface\EventInterface;
 use EasySwoole\Core\Component\Di;
 use EasySwoole\Core\Swoole\EventHelper;
+use EasySwoole\Core\Swoole\Memory\TableManager;
 use \EasySwoole\Core\Swoole\ServerManager;
 use \EasySwoole\Core\Swoole\EventRegister;
 use \EasySwoole\Core\Http\Request;
@@ -34,10 +35,11 @@ Class EasySwooleEvent implements EventInterface {
         //注册onClose事件
         $register->add($register::onClose, function (\swoole_server $server, $fd, $reactorId) {
             //清除Redis fd的全部关联
-            Room::close($fd);
+            RoomRedis::close($fd);
         });
         // 注册
         Di::getInstance()->set('REDIS',new Redis(Config::getInstance()->getConf('REDIS')));
+        //Di::getInstance()->set('ROOM_TABLE',TableManager::getInstance());
     }
 
     public static function onRequest(Request $request,Response $response): void
