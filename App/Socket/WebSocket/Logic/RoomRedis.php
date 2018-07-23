@@ -8,6 +8,8 @@
  */
 
 
+
+
 namespace App\Socket\WebSocket\Logic;
 
 
@@ -15,11 +17,15 @@ use EasySwoole\Core\Component\Di;
 
 class RoomRedis
 {
-    const T_USER = 'user:';
+    const T_USER = 'online';
     const T_FD = 'fd:';
     const T_ROOM = 'room:';
     const T_ROOM_SET = 'room_set';
 
+    public static function test()
+    {
+        echo self::getRedis()->set('test','123',20);
+    }
     /**
      * 获取Redis连接实例
      * @return object Redis
@@ -51,7 +57,7 @@ class RoomRedis
     public static function joinRoom(int $roomId, int $fd)
     {
         $userId = self::getUserId($fd);
-        self::getRedis()->sSadd(self::T_ROOM_SET,$roomId);
+        self::getRedis()->sAdd(self::T_ROOM_SET,$roomId);
         self::getRedis()->hSet(self::T_FD.$fd, $roomId, $userId);
         self::getRedis()->hSet(self::T_ROOM.$roomId, $fd, $userId);
     }
@@ -64,7 +70,8 @@ class RoomRedis
      */
     public static function getUserId(int $fd)
     {
-        return self::getRedis()->zScore(self::T_USER, $fd);
+        $userId = self::getRedis()->zScore(self::T_USER, $fd);
+        return $userId;
     }
 
     /**

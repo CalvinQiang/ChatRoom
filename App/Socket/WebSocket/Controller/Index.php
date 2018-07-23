@@ -12,6 +12,8 @@ namespace App\Socket\WebSocket\Controller;
 
 
 use App\Socket\WebSocket\Logic\RoomRedis;
+use App\Utility\RedisPool;
+use EasySwoole\Core\Component\Pool\PoolManager;
 use EasySwoole\Core\Socket\AbstractInterface\WebSocketController;
 
 class Index extends WebSocketController
@@ -28,8 +30,13 @@ class Index extends WebSocketController
 
     public function index()
     {
-        $fd = $this->client()->getFd();
-        $this->response()->write("you fd is {$fd}");
+        $pool = PoolManager::getInstance()->getPool(RedisPool::class);
+
+        $redis = $pool->getObj(); // 这里的pool是通过poolManager获取的RedisPool
+        $redis->exec('set', 'a', '123');
+        $a = $redis->exec('get', 'a');
+        $this->response()->write($a);
+        $pool->freeObj($redis);
     }
 
 }

@@ -36,6 +36,7 @@ class chat extends BaseController
 
     public function index()
     {
+        RoomRedis::test();
         $package = Response::Ok('Change the World by Program');
         $this->sendPackage($package);
     }
@@ -50,12 +51,11 @@ class chat extends BaseController
         $roomId = $param['roomId'];
 
         $fd = $this->client()->getFd();
+
         RoomRedis::login($userId, $fd);
         RoomRedis::joinRoom($roomId, $fd);
-
         $package = Response::Ok();
         $this->sendPackage($package);
-        //$this->response()->write("加入{$roomId}房间");
     }
 
     /**
